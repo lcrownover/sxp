@@ -1,6 +1,6 @@
 use clap::Parser;
 
-/// sexpand
+/// sxp
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {

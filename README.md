@@ -1,4 +1,4 @@
-# sexpand
+# sxp
 
 This tool should provide some of the basic hostname expansion capabilities
 from the SLURM node notation.

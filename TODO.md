@@ -2,11 +2,11 @@
 
 - two positional arguments
 
-`sexpand 'notation' 'expression'
+`sxp 'notation' 'expression'
 
 For example:
 
-From: `sexpand 'n01-n03' '{}.talapas.uoregon.edu.yml'`
+From: `sxp 'n01-n03' '{}.talapas.uoregon.edu.yml'`
 To: `n01.talapas.uoregon.edu.yml,n02.talapas.uoregon.edu.yml,n03.talapas.uoregon.edu.yml`
 
 - parsing into groups
