@@ -7,12 +7,11 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// SLURM-based hostname pattern
+    /// SLURM-based hostname pattern to expand
     #[clap(value_name = "PATTERN")]
     pattern: String,
 
-    /// Expression to expand the hostnames into
-    /// Use '{}' for replacement item
+    /// Expression using '{}' to expand the hostnames into
     #[clap(value_name = "EXPRESSION", default_value = "")]
     expression: String,
 
