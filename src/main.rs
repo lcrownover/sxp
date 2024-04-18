@@ -1,6 +1,9 @@
+use std::process::exit;
+
+use anyhow::{bail, Result};
 use clap::Parser;
 
-/// sxp
+/// sexpand
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -9,6 +12,7 @@ struct Args {
     pattern: String,
 
     /// Expression to expand the hostnames into
+    /// Use '{}' for replacement item
     #[clap(value_name = "EXPRESSION", default_value = "")]
     expression: String,
 
@@ -25,7 +29,7 @@ fn pad_number(num: i32, pad: i32) -> String {
     s
 }
 
-fn get_host_range(prefix: &String, start_num: &String, end_num: &String) -> Vec<String> {
+fn get_host_range(prefix: &str, start_num: &str, end_num: &str) -> Vec<String> {
     let mut hostnames: Vec<String> = Vec::new();
     let number_length = start_num.len();
     let start_num = match start_num.parse::<i32>() {
@@ -51,7 +55,7 @@ fn get_host_range(prefix: &String, start_num: &String, end_num: &String) -> Vec<
 /// n[01,02],n03,n[05-07,09]
 /// n01,n02,n03,n05,n06,n07
 ///
-fn expand_hostnames(pattern: String) -> Vec<String> {
+fn expand_hostnames(pattern: &str) -> Result<Vec<String>> {
     // keep track of brackets and expand commas
     let mut hostnames: Vec<String> = Vec::new();
     let mut queue: Vec<String> = Vec::new();
@@ -59,34 +63,32 @@ fn expand_hostnames(pattern: String) -> Vec<String> {
     let mut prefix: Vec<String> = Vec::new();
     let mut numbers = Vec::new();
     let mut start_num = String::from("");
-    let mut end_num = String::from("");
     let mut found_range = false;
 
     for (i, c) in pattern.chars().enumerate() {
-        if c.is_alphabetic() {
-            if nest_counter == 0 {
-                prefix.push(c.to_string());
-            }
+        if c.is_alphabetic() && nest_counter == 0 {
+            prefix.push(c.to_string());
         }
         if c.is_numeric() {
             numbers.push(c.to_string());
         }
         if c == '[' {
             nest_counter += 1;
+            if nest_counter > 1 {
+                bail!("Cannot nest brackets in pattern")
+            }
         }
         if c == ']' {
-            end_num = numbers.join("");
             if found_range {
                 let mut expanded_range = get_host_range(
                     &prefix.join(""),
-                    &start_num.to_string(),
-                    &end_num.to_string(),
+                    &start_num,
+                    &numbers.join(""),
                 );
                 queue.append(&mut expanded_range);
             }
             nest_counter -= 1;
             start_num = String::from("");
-            end_num = String::from("");
             found_range = false;
         }
         if c == '-' {
@@ -96,16 +98,14 @@ fn expand_hostnames(pattern: String) -> Vec<String> {
         }
         if c == ',' || i == pattern.len() - 1 {
             if found_range {
-                end_num = numbers.join("");
                 let mut expanded_range = get_host_range(
                     &prefix.join(""),
-                    &start_num.to_string(),
-                    &end_num.to_string(),
+                    &start_num,
+                    &numbers.join(""),
                 );
                 queue.append(&mut expanded_range);
             }
             start_num = String::from("");
-            end_num = String::from("");
             let hostname = prefix.join("") + numbers.join("").as_str();
             queue.push(hostname);
             hostnames.append(&mut queue);
@@ -120,23 +120,40 @@ fn expand_hostnames(pattern: String) -> Vec<String> {
     hostnames.append(&mut queue);
     hostnames.sort();
     hostnames.dedup();
-    hostnames
+    Ok(hostnames)
 }
 
+/// Returns a single string that's delimited by the separator, where
+/// each component is the expression that's interpolated by the hostname
+/// at each pattern of '{}'
 fn expand_pattern(hostnames: Vec<String>, expression: String, separator: String) -> String {
     let mut expanded = Vec::new();
+    let sep = match separator.as_str() {
+        "\\n" => "\n".to_string(),
+        _ => separator,
+    };
     for hostname in hostnames {
         expanded.push(expression.replace("{}", &hostname));
     }
-    expanded.join(separator.as_str())
+    expanded.join(&sep)
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
-    let hostnames = expand_hostnames(args.pattern);
+    let hostnames = match expand_hostnames(&args.pattern) {
+        Ok(hostnames) => hostnames,
+        Err(e) => {
+            println!("{}", e);
+            exit(1)
+        }
+    };
     let s = expand_pattern(hostnames, args.expression, args.separator);
-    println!("{}", s);
+    for line in s.lines() {
+        println!("{}", line);
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -157,13 +174,13 @@ mod tests {
     fn test_get_host_range() {
         // get_host_range("n", "01", "03") -> ["n01", "n02", "n03"]
         assert_eq!(
-            get_host_range(&"n".to_string(), &"01".to_string(), &"03".to_string()),
+            get_host_range(&"n", &"01", &"03"),
             ["n01", "n02", "n03"]
         );
 
         // get_host_range("n", "01", "02") -> ["n01", "n02"]
         assert_eq!(
-            get_host_range(&"n".to_string(), &"01".to_string(), &"02".to_string()),
+            get_host_range(&"n", &"01", &"02"),
             ["n01", "n02"]
         );
     }
@@ -171,18 +188,31 @@ mod tests {
     #[test]
     fn test_expand_hostnames() {
         // expand_hostnames("n01,n02") -> ["n01", "n02"]
-        assert_eq!(expand_hostnames("n01,n02".to_string()), ["n01", "n02"]);
+        assert_eq!(
+            expand_hostnames("n01,n02").unwrap(),
+            ["n01", "n02"]
+        );
 
         // expand_hostnames("n[01-05]") -> ["n01", "n02", "n03", "n04", "n05"]
         assert_eq!(
-            expand_hostnames("n[01-05]".to_string()),
+            expand_hostnames("n[01-05]").unwrap(),
             ["n01", "n02", "n03", "n04", "n05"]
         );
 
         // expand_hostnames("n[01,02],n03,n[05-07,09]") -> ["n01", "n02", "n03", "n05", "n06", "n07"]
         assert_eq!(
-            expand_hostnames("n[01,02],n03,n[05-07,09]".to_string()),
+            expand_hostnames("n[01,02],n03,n[05-07,09]").unwrap(),
             ["n01", "n02", "n03", "n05", "n06", "n07", "n09"]
         );
+
+        // expand_hostnames("n[01,02],n03,n[05-07,09]") -> ["n01", "n02", "n03", "n05", "n06", "n07"]
+        assert_eq!(
+            expand_hostnames("n[01,02],n03,n[05-07,09]").unwrap(),
+            ["n01", "n02", "n03", "n05", "n06", "n07", "n09"]
+        );
+
+        // expand_hostnames("n[[01,02]-03],n[05-07,09]") -> Err
+        let res = expand_hostnames("n[[01,02]-03],n[05-07,09]");
+        assert!(res.is_err())
     }
 }
