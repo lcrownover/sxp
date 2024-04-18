@@ -1,6 +1,7 @@
 #!/bin/bash
 
-CURRENT_TAG=$(git tag --sort=taggerdate | tail -1)
+# CURRENT_TAG=$(git tag --sort=taggerdate | tail -1)
+CURRENT_TAG='v1.0.2'
 
 if [[ "$(uname -a)" == "Darwin"* ]]; then
 	ARCH=apple-darwin
