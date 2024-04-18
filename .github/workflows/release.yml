@@ -6,7 +6,8 @@ permissions:
 
 on:
   push:
-    tags: [ 'v*.*.*' ]
+    tags: 
+      - v*
 
 jobs:
   create-release:
