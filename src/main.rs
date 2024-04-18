@@ -80,11 +80,8 @@ fn expand_hostnames(pattern: &str) -> Result<Vec<String>> {
         }
         if c == ']' {
             if found_range {
-                let mut expanded_range = get_host_range(
-                    &prefix.join(""),
-                    &start_num,
-                    &numbers.join(""),
-                );
+                let mut expanded_range =
+                    get_host_range(&prefix.join(""), &start_num, &numbers.join(""));
                 queue.append(&mut expanded_range);
             }
             nest_counter -= 1;
@@ -98,11 +95,8 @@ fn expand_hostnames(pattern: &str) -> Result<Vec<String>> {
         }
         if c == ',' || i == pattern.len() - 1 {
             if found_range {
-                let mut expanded_range = get_host_range(
-                    &prefix.join(""),
-                    &start_num,
-                    &numbers.join(""),
-                );
+                let mut expanded_range =
+                    get_host_range(&prefix.join(""), &start_num, &numbers.join(""));
                 queue.append(&mut expanded_range);
             }
             start_num = String::from("");
@@ -173,25 +167,16 @@ mod tests {
     #[test]
     fn test_get_host_range() {
         // get_host_range("n", "01", "03") -> ["n01", "n02", "n03"]
-        assert_eq!(
-            get_host_range(&"n", &"01", &"03"),
-            ["n01", "n02", "n03"]
-        );
+        assert_eq!(get_host_range(&"n", &"01", &"03"), ["n01", "n02", "n03"]);
 
         // get_host_range("n", "01", "02") -> ["n01", "n02"]
-        assert_eq!(
-            get_host_range(&"n", &"01", &"02"),
-            ["n01", "n02"]
-        );
+        assert_eq!(get_host_range(&"n", &"01", &"02"), ["n01", "n02"]);
     }
 
     #[test]
     fn test_expand_hostnames() {
         // expand_hostnames("n01,n02") -> ["n01", "n02"]
-        assert_eq!(
-            expand_hostnames("n01,n02").unwrap(),
-            ["n01", "n02"]
-        );
+        assert_eq!(expand_hostnames("n01,n02").unwrap(), ["n01", "n02"]);
 
         // expand_hostnames("n[01-05]") -> ["n01", "n02", "n03", "n04", "n05"]
         assert_eq!(
