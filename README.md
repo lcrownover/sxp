@@ -17,11 +17,11 @@ To: `n01,n02,n03,n09,n10,n11`
 ## Install
 
 ```bash
-curl https://raw.githubusercontent.com/lcrownover/sexpand/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lcrownover/sexpand/main/install.sh | bash
 ```
 
 ## Uninstall
 
 ```bash
-curl https://raw.githubusercontent.com/lcrownover/sexpand/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/lcrownover/sexpand/main/install.sh | bash
 ```
