@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# CURRENT_TAG=$(git tag --sort=taggerdate | tail -1)
-CURRENT_TAG='v1.0.2'
+CURRENT_TAG=$(curl -s https://api.github.com/repos/lcrownover/sexpand/tags | grep name | head -n1 | awk '{print $2}' | tr -d '[,"]')
 
 if [[ "$(uname -a)" == "Darwin"* ]]; then
 	ARCH=apple-darwin
